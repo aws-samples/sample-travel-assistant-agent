@@ -1,0 +1,2 @@
+cd infra
+yarn destroy

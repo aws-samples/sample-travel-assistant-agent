@@ -1,0 +1,29 @@
+.awsui_top-navigation_k5dlb_f8s5t_111:not(#\9) {
+  background: var(--nav-bg) !important;
+}
+
+/* Global styles for responsive layout */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure AppLayout takes full height */
+.awsui-app-layout {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Fix for content area */
+.awsui-app-layout-content {
+  height: 100%;
+  overflow: hidden;
+}
