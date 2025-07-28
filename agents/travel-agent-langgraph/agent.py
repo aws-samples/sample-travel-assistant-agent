@@ -23,7 +23,7 @@ import json
 
 from config import (
     user_table_name, chat_table_name, wishlist_table_name, kb_id,
-    USE_PAAPI, paapi_access, paapi_secret,
+    USE_PAAPI, paapi_access, paapi_secret, partner_tag,
     nova_lite_llm_converse, nova_pro_llm_converse, AGENT_RT,
     my_api_key, my_cse_id, open_weather_api_key
 )
@@ -72,9 +72,9 @@ class TravelAgent:
         
         # Create nodes with PAAPI fallback
         if USE_PAAPI and paapi_access and paapi_secret:
-            pack_node = PackingListNode(nova_lite_llm_converse, paapi_access, paapi_secret)
-            product_node = ProductSearchNode(nova_lite_llm_converse, paapi_access, paapi_secret)
-            grocery_node = PackingListNode(nova_lite_llm_converse, paapi_access, paapi_secret)
+            pack_node = PackingListNode(nova_lite_llm_converse, paapi_access, paapi_secret, partner_tag)
+            product_node = ProductSearchNode(nova_lite_llm_converse, paapi_access, paapi_secret, partner_tag)
+            grocery_node = PackingListNode(nova_lite_llm_converse, paapi_access, paapi_secret, partner_tag)
         else:
             pack_node = FallbackPackingListNode(nova_lite_llm_converse)
             product_node = FallbackProductSearchNode(nova_lite_llm_converse)

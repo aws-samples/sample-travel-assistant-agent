@@ -54,6 +54,7 @@ if USE_PAAPI:
         paapi_keys = json.loads(get_secret(PAAPI_SECRET_NAME))
         paapi_access = paapi_keys["paapi_public"]
         paapi_secret = paapi_keys["paapi_secret"]
+        partner_tag= paapi_keys["partner_tag"]
         print("PAAPI enabled")
     except Exception as e:
         print(f"PAAPI setup failed: {e}")

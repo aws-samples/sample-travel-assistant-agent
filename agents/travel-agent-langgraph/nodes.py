@@ -237,7 +237,7 @@ class TripRecommendationNode(BaseNode):
 
 
 class PackingListNode(BaseNode):
-    def __init__(self, llm, paapi_access: str, paapi_secret: str):
+    def __init__(self, llm, paapi_access: str, paapi_secret: str, partner_tag: str):
         super().__init__(llm)
         if not PAAPI_AVAILABLE:
             raise ImportError("PAAPI SDK not available")
@@ -247,6 +247,7 @@ class PackingListNode(BaseNode):
             host="webservices.amazon.com",
             region=region_name
         )
+        self.paapi_partner_tag = partner_tag
         self.pack_chain = (amazon_pack_template | self.llm | StrOutputParser()).with_config({"name": "pack_chain"})
         self.format_chain = (amazon_search_format_template | self.llm | StrOutputParser()).with_config({"name": "format_chain"})
         self.consolidate_chain = (consolidate_cart_prompt_template | self.llm | StrOutputParser()).with_config({"name": "consolidate_chain"})
@@ -297,7 +298,7 @@ class PackingListNode(BaseNode):
     def _search_products(self, query: str) -> Dict:
         print(f"Searching for products: {query}")
         search_results = self.paapi.search_items(SearchItemsRequest(
-            partner_tag="baba",
+            partner_tag=self.paapi_partner_tag,
             partner_type=PartnerType.ASSOCIATES,
             keywords=query,
             search_index="All",
@@ -320,7 +321,7 @@ class PackingListNode(BaseNode):
                     "qty": "1",
                     "title": item.item_info.title.display_value,
                     "price": str(item.offers.listings[0].price.amount),
-                    "reviews": str(item.customer_reviews.star_rating.value)
+                    # "reviews": str(item.customer_reviews.star_rating.value)
                 })
                 
                 products.append({
@@ -328,7 +329,7 @@ class PackingListNode(BaseNode):
                     "detail_page_url": item.detail_page_url,
                     "title": item.item_info.title,
                     "price": item.offers,
-                    "customer_reviews": item.customer_reviews
+                    # "customer_reviews": item.customer_reviews
                 })
             except (AttributeError, KeyError, IndexError) as e:
                 print(f"Error processing item {item.asin}: {e}")
@@ -460,7 +461,7 @@ class OrderCartNode(BaseNode):
 
 
 class ProductSearchNode(BaseNode):
-    def __init__(self, llm, paapi_access: str, paapi_secret: str):
+    def __init__(self, llm, paapi_access: str, paapi_secret: str, partner_tag: str):
         super().__init__(llm)
         if not PAAPI_AVAILABLE:
             raise ImportError("PAAPI SDK not available")
@@ -470,6 +471,7 @@ class ProductSearchNode(BaseNode):
             host="webservices.amazon.com",
             region=region_name
         )
+        self.paapi_partner_tag = partner_tag
         self.format_chain = (amazon_search_format_template | self.llm | StrOutputParser()).with_config({"name": "format_chain"})
         self.search_chain = (amazon_search_template | self.llm | StrOutputParser()).with_config({"name": "search_chain"})
 
@@ -504,7 +506,7 @@ class ProductSearchNode(BaseNode):
     def _search_products(self, query: str) -> Dict:
         try:
             search_results = self.paapi.search_items(SearchItemsRequest(
-                partner_tag="baba",
+                partner_tag=self.paapi_partner_tag,
                 partner_type=PartnerType.ASSOCIATES,
                 keywords=query.replace("\n", "").replace("<entity>", "").replace("</entity>", ""),
                 search_index="All",
@@ -527,7 +529,7 @@ class ProductSearchNode(BaseNode):
                         "qty": "1",
                         "title": item.item_info.title.display_value,
                         "price": str(item.offers.listings[0].price.amount),
-                        "reviews": str(item.customer_reviews.star_rating.value)
+                        # "reviews": str(item.customer_reviews.star_rating.value)
                     })
                     
                     products.append({
@@ -535,7 +537,7 @@ class ProductSearchNode(BaseNode):
                         "detail_page_url": item.detail_page_url,
                         "title": item.item_info.title,
                         "price": item.offers,
-                        "customer_reviews": item.customer_reviews
+                        # "customer_reviews": item.customer_reviews
                     })
                 except Exception as e:
                     print(f"Error processing search item: {e}")

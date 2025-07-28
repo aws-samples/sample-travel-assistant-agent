@@ -72,7 +72,8 @@ Create the following secrets in AWS Secrets Manager:
 ```json
 {
   "paapi_public": "YOUR_PUBLIC_KEY",
-  "paapi_secret": "YOUR_SECRET_KEY"
+  "paapi_secret": "YOUR_SECRET_KEY",
+  "partner_tag": "YOUR_PARTNER_TAG"
 }
 ```
 
