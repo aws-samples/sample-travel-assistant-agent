@@ -18,3 +18,4 @@ six>=1.16.0
 python_dateutil>=2.8.2
 setuptools>=68.0.0
 langgraph
+RapidFuzz

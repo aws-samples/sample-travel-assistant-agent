@@ -14,6 +14,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
 
 from abc import ABC, abstractmethod
+import csv
+from datetime import datetime
 from typing import Any, Dict, Optional, List
 import time
 import re
@@ -21,6 +23,8 @@ from langchain_core.output_parsers import StrOutputParser
 from bs4 import BeautifulSoup
 from googleapiclient.discovery import build
 import requests
+from rapidfuzz import process, fuzz
+
 # Optional PAAPI imports
 try:
     from paapi5_python_sdk.api.default_api import DefaultApi
@@ -341,26 +345,56 @@ class WeatherNode(BaseNode):
     def __init__(self, llm, openweather_api_key: str):
         super().__init__(llm)
         self.api_key = openweather_api_key
-        self.location_chain = (longlat_prompt_template | self.llm | StrOutputParser()).with_config({"name": "location_chain"})
+        self.extract_city_chain = (extract_city_prompt_template | self.llm | StrOutputParser()).with_config({"name": "city_chain"})
+        self.location_chain = (confirm_location_prompt_template | self.llm | StrOutputParser()).with_config({"name": "location_chain"})
         self.weather_chain = (weather_prompt_template | self.llm | StrOutputParser()).with_config({"name": "weather_chain"})
 
     def process(self, state: Dict) -> Dict:
         try:
-            # Get location coordinates
-            location_response = self.invoke_chain(self.location_chain, {
-                "input": state["input"],
-                "user_profile": state.get("user_profile", {})
+            # Extract city from query using LLM
+            extracted_city_response = self.invoke_chain(self.extract_city_chain, {
+                "input": state["input"]
             })
-            location = self.safe_parse_json(location_response)
+            extracted_city = self.safe_parse_json(extracted_city_response)["city_name"]
+
+            # Match city name to database
+            matches = self._match_city(extracted_city, score_cutoff=84)
+            city_candidates = matches if matches else []
+
+            # Disambiguate with LLM
+            confirmed = self.invoke_chain(self.location_chain, {
+                "input": state["input"],
+                "city_candidates": city_candidates
+            })
+            location = self.safe_parse_json(confirmed)
 
             # Get weather data
-            weather_data = self._get_weather_data(location)
+            weather_raw = self._get_weather_data(location)
+            weather_json = self.safe_parse_json(weather_raw)
+            
+            # Compress forecast
+            daily_forecast = {}
+            for entry in weather_json["list"]:
+                dt = datetime.strptime(entry["dt_txt"], "%Y-%m-%d %H:%M:%S")
+                day = dt.date()
+                hour = dt.hour
+                if hour == 12 and day not in daily_forecast:
+                    daily_forecast[day] = entry
+
+            forecast_output = []
+            for day in sorted(daily_forecast.keys()):
+                entry = daily_forecast[day]
+                desc = entry["weather"][0]["description"]
+                temp = round((entry["main"]["temp"] - 273.15) * 9/5 + 32)
+                forecast_output.append(f"{day.strftime('%A, %b %d')}: {desc}, {temp}°F")
+
+            forecast_weather_data = "\n".join(forecast_output)
 
             # Generate response
             state["final_output"] = {
                 "answer": self.invoke_chain(self.weather_chain, {
                     "input": state["input"],
-                    "search_res": weather_data,
+                    "search_res": forecast_weather_data,
                     "previous_chat": state["chat_history"][-20:]
                 })
             }
@@ -368,6 +402,37 @@ class WeatherNode(BaseNode):
             
         except Exception as e:
             return self.handle_error(e, state)
+        
+    def _load_cities(self, filepath):
+        """load city file efficiently (using built-in csv, not pandas)"""
+        with open(filepath, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            cities = []
+            for row in reader:
+                # Normalize types
+                cities.append(
+                    {
+                        "city": row["city"].strip(),
+                        "country": row.get("country", "").strip(),
+                        "latitude": float(row["lat"]),
+                        "longitude": float(row["lng"]),
+                        "population": row["population"],
+                    }
+                )
+            return cities
+
+    def _match_city(self, user_input, top_n=3, score_cutoff=80):
+
+        # all city names
+        cities = self._load_cities("data/worldcities.csv")
+        city_names = [c["city"].lower() for c in cities]
+
+        matches = process.extract(user_input, city_names, scorer=fuzz.WRatio, limit=top_n)
+
+        # Filter out low-confidence matches
+        return [
+            (match, cities[idx]) for match, score, idx in matches if score >= score_cutoff
+        ]
 
     def _get_weather_data(self, location: Dict) -> list:
         response = requests.get(
@@ -378,17 +443,8 @@ class WeatherNode(BaseNode):
                 "appid": self.api_key
             },
             timeout=10
-        ).json()
-
-        return [{
-            "datetime": item['dt_txt'],
-            "temperature": (item['main']['temp'] - 273.15) * 9/5 + 32,
-            "pressure": item['main']['pressure'],
-            "humidity": item['main']['humidity'],
-            "weather": item['weather'][0]['description'],
-            "wind": item['wind'],
-            "clouds": item["clouds"]
-        } for item in response["list"]]
+        )
+        return response.content.decode()
 
 
 class ConversationSummaryNode(BaseNode):
