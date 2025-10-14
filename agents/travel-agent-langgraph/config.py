@@ -61,10 +61,12 @@ if USE_PAAPI:
         USE_PAAPI = False
         paapi_access = None
         paapi_secret = None
+        partner_tag = None
 else:
     print("PAAPI disabled")
     paapi_access = None
     paapi_secret = None
+    partner_tag = None
 
 #################### AWS CLIENT CONFIG ####################
 
