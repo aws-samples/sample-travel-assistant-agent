@@ -120,7 +120,7 @@ Before deploying, you must manually create the following secrets in AWS Secrets 
    **Note:** To use PAAPI features, you must also:
    - Download the Python SDK from [Amazon Product Advertising API SDK](https://webservices.amazon.com/paapi5/documentation/quick-start/using-sdk.html)
    - **For local development**: Extract the zip file contents into the `agents/travel-agent-langgraph/` directory
-   - **For deployment**: Place the zip file (without extracting) into the `paapi5_python_sdk/` folder
+   - **For deployment**: Place the zip file (without extracting) into the `paapi5-python-sdk/` folder
    - Set `USE_PAAPI=true` in your `.env` file
 
 #### Deploy infrastructure, back end, front end:
