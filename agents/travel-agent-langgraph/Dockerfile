@@ -11,6 +11,9 @@ RUN pip3 install -r requirements.txt --target "${LAMBDA_TASK_ROOT}" --no-cache-d
 # Copy application code
 COPY *.py ${LAMBDA_TASK_ROOT}/
 
+# Copy data directory
+COPY data/ ${LAMBDA_TASK_ROOT}/data/
+
 # Install system dependencies for PAAPI SDK (always install to avoid runtime issues)
 RUN microdnf install -y unzip && \
     mkdir -p /tmp/paapi && \
